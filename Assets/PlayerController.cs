@@ -73,6 +73,11 @@ public class PlayerController : MonoBehaviour
             {
                 info.gameObject.transform.position = info.startPosition;
             }
+
+            if (Input.GetKeyDown(KeyCode.R))
+            {
+                info.gameObject.transform.Rotate(0f, 90f, 0f);
+            }
         }
     }
 
