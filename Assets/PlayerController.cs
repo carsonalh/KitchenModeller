@@ -1,5 +1,7 @@
 using UnityEngine;
 using System;
+using System.Collections.Generic;
+using Unity.VisualScripting;
 
 public class PlayerController : MonoBehaviour
 {
@@ -7,6 +9,7 @@ public class PlayerController : MonoBehaviour
     public float lookSpeedVertical = 1.0f;
     public float lookSpeedHorizontal = 1.0f;
     public GameObject head = null;
+    public List<Snap> snaps = new List<Snap>();
 
     public struct PickedupInfo
     {
@@ -66,8 +69,34 @@ public class PlayerController : MonoBehaviour
 
             if (groundPlane.Raycast(ray, out var enter))
             {
-                var point = ray.GetPoint(enter);
-                info.gameObject.transform.position = info.startPosition + ray.GetPoint(enter) - info.startHandle;
+                var placement = info.startPosition + ray.GetPoint(enter) - info.startHandle;
+                var boxCollider = info.gameObject.GetComponent<BoxCollider>();
+                const float LargeNumber = 1_000_000f;
+
+                foreach (var snap in snaps)
+                {
+                    var pointClosestToWall = boxCollider.ClosestPoint(boxCollider.transform.position + LargeNumber * (-snap.normal.normalized))
+                        + placement
+                        - boxCollider.transform.position;
+                    var pointClosestOnWall = snap.boxCollider.ClosestPoint(pointClosestToWall);
+                    var objectToWall = pointClosestOnWall - pointClosestToWall;
+                    var distanceToWall = Vector3.Dot(objectToWall, -snap.normal.normalized);
+
+                    const float Epsilon = 0.0001f;
+
+                    if (distanceToWall < snap.snapDistance)
+                    {
+                        // Only snap things which are orthogonal to the snap plane
+                        if (Math.Abs(objectToWall.magnitude - Math.Abs(distanceToWall)) > Epsilon)
+                        {
+                            continue;
+                        }
+
+                        placement += pointClosestOnWall - pointClosestToWall;
+                    }
+                }
+
+                info.gameObject.transform.position = placement;
             }
             else
             {
